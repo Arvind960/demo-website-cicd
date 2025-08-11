@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Website - DevOps Pipeline</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <h1>DevOps Demo</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pipeline">Pipeline</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h2>Welcome to DevOps Demo Website</h2>
+                <p>This website demonstrates a complete CI/CD pipeline with Jenkins, Docker, and SonarQube integration.</p>
+                <div class="stats">
+                    <div class="stat">
+                        <h3 id="build-count">0</h3>
+                        <p>Builds Completed</p>
+                    </div>
+                    <div class="stat">
+                        <h3 id="scan-count">0</h3>
+                        <p>Security Scans</p>
+                    </div>
+                    <div class="stat">
+                        <h3 id="deploy-count">0</h3>
+                        <p>Deployments</p>
+                    </div>
+                </div>
+                <button onclick="incrementStats()" class="cta-button">Simulate Pipeline Run</button>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <h2>Pipeline Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🔨 Automated Build</h3>
+                    <p>Automatic Docker image building from source code with multi-stage builds for optimization.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔍 Code Analysis</h3>
+                    <p>Comprehensive code quality analysis using SonarQube with quality gates.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛡️ Security Scanning</h3>
+                    <p>Container security scanning and vulnerability assessment.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚀 Automated Deployment</h3>
+                    <p>Seamless deployment to multiple environments with rollback capabilities.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pipeline" class="pipeline">
+            <h2>CI/CD Pipeline Status</h2>
+            <div class="pipeline-status">
+                <div class="pipeline-step active">
+                    <div class="step-icon">✓</div>
+                    <div class="step-info">
+                        <h4>Source Code</h4>
+                        <p>Code committed to repository</p>
+                    </div>
+                </div>
+                <div class="pipeline-step active">
+                    <div class="step-icon">⚙️</div>
+                    <div class="step-info">
+                        <h4>Build</h4>
+                        <p>Docker image built successfully</p>
+                    </div>
+                </div>
+                <div class="pipeline-step active">
+                    <div class="step-icon">🔍</div>
+                    <div class="step-info">
+                        <h4>SonarQube Scan</h4>
+                        <p>Code quality analysis passed</p>
+                    </div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="step-icon">🚀</div>
+                    <div class="step-info">
+                        <h4>Deploy</h4>
+                        <p>Ready for deployment</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 DevOps Demo Website. Built with Jenkins, Docker, and SonarQube.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
