@@ -5,10 +5,10 @@ pipeline {
         // Docker settings
         DOCKER_IMAGE = 'demo-website'
         DOCKER_TAG = "${BUILD_NUMBER}"
-        DOCKER_REGISTRY = 'localhost:5000' // Change to your registry
+        DOCKER_REGISTRY = 'localhost:5000' // Change as needed
         
         // SonarQube settings
-        SONAR_SERVER = 'SonarQ' // Jenkins SonarQube server name configured in Manage Jenkins
+        SONAR_SERVER = 'SonarQ'              // SonarQube server name configured in Jenkins
         SONAR_PROJECT_KEY = 'demo-website'
         
         // Application settings
@@ -19,10 +19,8 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                script {
-                    echo "🔄 Checking out source code..."
-                    checkout scm
-                }
+                echo "🔄 Checking out source code..."
+                checkout scm
             }
         }
         
@@ -33,19 +31,19 @@ pipeline {
                         script {
                             echo "🔍 Running SonarQube analysis..."
                             withSonarQubeEnv(SONAR_SERVER) {
-                                sh '''
+                                sh """
                                     echo "Starting SonarQube analysis for demo website..."
                                     /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQ/bin/sonar-scanner \
-                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                        -Dsonar.projectName="DevOps Demo Website" \
-                                        -Dsonar.projectVersion=${BUILD_NUMBER} \
-                                        -Dsonar.sources=. \
-                                        -Dsonar.exclusions="node_modules/**,**/*.min.js,**/*.min.css,Dockerfile,nginx.conf" \
-                                        -Dsonar.sourceEncoding=UTF-8 \
-                                        -Dsonar.javascript.file.suffixes=.js \
-                                        -Dsonar.css.file.suffixes=.css \
-                                        -Dsonar.html.file.suffixes=.html
-                                '''
+                                      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                      -Dsonar.projectName="DevOps Demo Website" \
+                                      -Dsonar.projectVersion=${BUILD_NUMBER} \
+                                      -Dsonar.sources=. \
+                                      -Dsonar.exclusions=node_modules/**,**/*.min.js,**/*.min.css,Dockerfile,nginx.conf \
+                                      -Dsonar.sourceEncoding=UTF-8 \
+                                      -Dsonar.javascript.file.suffixes=.js \
+                                      -Dsonar.css.file.suffixes=.css \
+                                      -Dsonar.html.file.suffixes=.html
+                                """
                             }
                         }
                     }
@@ -63,7 +61,7 @@ pipeline {
                                     echo "❌ HTML structure issues found"
                                     exit 1
                                 fi
-                                
+
                                 echo "Checking CSS syntax..."
                                 if [ -f "styles.css" ]; then
                                     echo "✅ CSS file found"
@@ -71,7 +69,7 @@ pipeline {
                                     echo "❌ CSS file missing"
                                     exit 1
                                 fi
-                                
+
                                 echo "Checking JavaScript syntax..."
                                 if [ -f "script.js" ]; then
                                     echo "✅ JavaScript file found"
@@ -94,15 +92,12 @@ pipeline {
                         try {
                             def qg = waitForQualityGate()
                             if (qg.status != 'OK') {
-                                echo "⚠️ Quality Gate failed: ${qg.status}"
-                                // For demo, continue build anyway
-                                echo "🔄 Continuing build despite Quality Gate failure..."
+                                error "⚠️ Quality Gate failed: ${qg.status}"
                             } else {
                                 echo "✅ Quality Gate passed!"
                             }
                         } catch (Exception e) {
-                            echo "⚠️ Quality Gate check failed: ${e.getMessage()}"
-                            echo "🔄 Continuing build despite Quality Gate check failure..."
+                            error "⚠️ Quality Gate check failed: ${e.getMessage()}"
                         }
                     }
                 }
@@ -111,62 +106,58 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo "🐳 Building Docker image..."
-                    sh '''
-                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
-                        docker images | grep ${DOCKER_IMAGE}
-                    '''
-                }
+                echo "🐳 Building Docker image..."
+                sh """
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                    docker images | grep ${DOCKER_IMAGE}
+                """
             }
         }
         
         stage('Security Scan') {
             steps {
-                script {
-                    echo "🛡️ Running security scans..."
-                    sh '''
-                        if docker run --rm ${DOCKER_IMAGE}:${DOCKER_TAG} whoami | grep -q root; then
-                            echo "⚠️ Container runs as root user"
-                        else
-                            echo "✅ Container does not run as root"
-                        fi
-                        
-                        echo "Exposed ports:"
-                        docker inspect ${DOCKER_IMAGE}:${DOCKER_TAG} | grep -i ExposedPorts || echo "No exposed ports"
-                    '''
-                }
+                echo "🛡️ Running security scans..."
+                sh """
+                    if docker run --rm ${DOCKER_IMAGE}:${DOCKER_TAG} whoami | grep -q root; then
+                        echo "⚠️ Container runs as root - consider non-root user"
+                    else
+                        echo "✅ Container not running as root"
+                    fi
+                    
+                    echo "Exposed ports:"
+                    docker inspect ${DOCKER_IMAGE}:${DOCKER_TAG} | grep -i ExposedPorts || echo "No exposed ports found"
+                """
             }
         }
         
         stage('Test Docker Image') {
             steps {
-                script {
-                    echo "🧪 Testing Docker image..."
-                    sh '''
-                        CONTAINER_ID=$(docker run -d -p ${APP_PORT}:80 ${DOCKER_IMAGE}:${DOCKER_TAG})
-                        sleep 10
-                        if curl -f http://localhost:${APP_PORT}/health; then
-                            echo "✅ Health check passed"
-                        else
-                            echo "❌ Health check failed"
-                            docker logs $CONTAINER_ID
-                            docker stop $CONTAINER_ID
-                            exit 1
-                        fi
-                        
-                        if curl -f http://localhost:${APP_PORT}/ | grep -q "DevOps Demo"; then
-                            echo "✅ Main page test passed"
-                        else
-                            echo "❌ Main page test failed"
-                            docker stop $CONTAINER_ID
-                            exit 1
-                        fi
-                        
-                        docker stop $CONTAINER_ID
-                    '''
-                }
+                echo "🧪 Testing Docker image..."
+                sh """
+                    CONTAINER_ID=\$(docker run -d -p ${APP_PORT}:80 ${DOCKER_IMAGE}:${DOCKER_TAG})
+                    echo "Started container: \$CONTAINER_ID"
+                    sleep 10
+                    if curl -f http://localhost:${APP_PORT}/health; then
+                        echo "✅ Health check passed"
+                    else
+                        echo "❌ Health check failed"
+                        docker logs \$CONTAINER_ID
+                        docker stop \$CONTAINER_ID
+                        exit 1
+                    fi
+                    
+                    if curl -f http://localhost:${APP_PORT}/ | grep -q "DevOps Demo"; then
+                        echo "✅ Main page test passed"
+                    else
+                        echo "❌ Main page test failed"
+                        docker stop \$CONTAINER_ID
+                        exit 1
+                    fi
+                    
+                    docker stop \$CONTAINER_ID
+                    echo "✅ All tests passed"
+                """
             }
         }
         
@@ -179,15 +170,14 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    echo "📤 Pushing image to registry..."
-                    sh '''
-                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
-                    '''
-                }
+                echo "📤 Pushing image to registry..."
+                sh """
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
+                    # docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                    # docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
+                    echo "✅ Image pushed to registry (simulated)"
+                """
             }
         }
         
@@ -200,67 +190,61 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    echo "🚀 Deploying application..."
-                    sh '''
-                        docker stop ${APP_NAME} 2>/dev/null || true
-                        docker rm ${APP_NAME} 2>/dev/null || true
-                        docker run -d --name ${APP_NAME} -p 9090:80 --restart unless-stopped ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        sleep 5
-                        if curl -f http://localhost:9090/health; then
-                            echo "✅ Deployment verification passed"
-                        else
-                            echo "❌ Deployment verification failed"
-                            exit 1
-                        fi
-                    '''
-                }
+                echo "🚀 Deploying application..."
+                sh """
+                    docker stop ${APP_NAME} 2>/dev/null || true
+                    docker rm ${APP_NAME} 2>/dev/null || true
+
+                    docker run -d --name ${APP_NAME} -p 9090:80 --restart unless-stopped ${DOCKER_IMAGE}:${DOCKER_TAG}
+
+                    echo "🌐 Application available at: http://localhost:9090"
+                    sleep 5
+                    if curl -f http://localhost:9090/health; then
+                        echo "✅ Deployment verification passed"
+                    else
+                        echo "❌ Deployment verification failed"
+                        exit 1
+                    fi
+                """
             }
         }
     }
     
     post {
         always {
-            script {
-                echo "🧹 Cleaning up..."
-                sh '''
-                    docker image prune -f
-                    echo "📊 Build Summary:"
-                    echo "- Build Number: ${BUILD_NUMBER}"
-                    echo "- Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    echo "- SonarQube Project: ${SONAR_PROJECT_KEY}"
-                    echo "- Application URL: http://localhost:9090"
-                '''
-            }
+            echo "🧹 Cleaning up..."
+            sh '''
+                docker image prune -f
+                echo "📊 Build Summary:"
+                echo "- Build Number: ${BUILD_NUMBER}"
+                echo "- Docker Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                echo "- SonarQube Project: ${SONAR_PROJECT_KEY}"
+                echo "- Application URL: http://localhost:9090"
+            '''
         }
-        
         success {
-            script {
-                echo "✅ Pipeline completed successfully!"
-                echo "🎉 Demo website is ready!"
-                echo ""
-                echo "📋 Access Points:"
-                echo "- Website: http://localhost:9090"
-                echo "- SonarQube: http://192.168.47.147:9000/dashboard?id=${SONAR_PROJECT_KEY}"
-                echo "- Jenkins: ${BUILD_URL}"
-            }
+            echo """
+            ✅ Pipeline completed successfully!
+            🎉 Demo website is ready!
+
+            📋 Access Points:
+            - Website: http://localhost:9090
+            - SonarQube: http://192.168.47.147:9000/dashboard?id=${SONAR_PROJECT_KEY}
+            - Jenkins: ${env.BUILD_URL}
+            """
         }
-        
         failure {
-            script {
-                echo "❌ Pipeline failed!"
-                echo "🔍 Check logs above for details"
-                echo "📋 Troubleshooting:"
-                echo "- Verify SonarQube server is reachable"
-                echo "- Check Docker daemon status"
-                echo "- Confirm dependencies installed"
-            }
+            echo """
+            ❌ Pipeline failed!
+            🔍 Check the logs above for details
+            📋 Troubleshooting:
+            - Verify SonarQube server is reachable and URL includes http://
+            - Check Docker daemon status
+            - Confirm all dependencies are installed
+            """
         }
-        
         cleanup {
-            script {
-                echo "🗑️ Workspace cleanup completed"
-            }
+            echo "🗑️ Workspace cleanup completed"
         }
     }
 }
